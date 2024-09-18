@@ -1,0 +1,6 @@
+CustomerID,FirstName,LastName,Email,PhoneNumber,City
+1001,John,Doe,john.doe@example.com,555-1234,New York
+1002,Jane,Smith,jane.smith@example.com,555-5678,Los Angeles
+1003,Michael,Johnson,michael.johnson@example.com,555-8765,Chicago
+1004,Emily,Brown,emily.brown@example.com,555-4321,Houston
+1005,David,Wilson,david.wilson@example.com,555-9876,San Francisco
