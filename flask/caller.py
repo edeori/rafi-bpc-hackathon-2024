@@ -17,7 +17,7 @@ header = { #ez az általam generált token, ezzel megy
 }
 #query the endpoint:
 
-query = "xd"
+query = "file/kérdés"
 
 r = requests.post(url, headers=header, json=query)
 
