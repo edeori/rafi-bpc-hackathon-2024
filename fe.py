@@ -18,7 +18,7 @@ uploaded_file = st.file_uploader("Choose a file", type=["txt", "md", "json", "xm
 # Function to call the REST API (with SSL verification disabled)
 def call_databricks_rest_api(question):
     # Your provided REST API endpoint (POST method)
-    url = "https://rbi-apex-us01-workspace-01.cloud.databricks.com/driver-proxy-api/o/0/0919-071713-ily24f8x/5001"
+    url = "https://rbi-apex-us01-workspace-01.cloud.databricks.com/driver-proxy-api/o/0/0919-072250-osoz48qo/5001"
     
     # The headers for authentication and content type
     headers = {
@@ -53,7 +53,7 @@ if st.button("Ask"):
 # Function to call the REST API for the document upload
 def call_databricks_rest_api_document(uploaded_file):
     # Your provided REST API endpoint for document upload
-    url = "https://rbi-apex-us01-workspace-01.cloud.databricks.com/document"
+    url = "https://rbi-apex-us01-workspace-01.cloud.databricks.com/driver-proxy-api/o/0/0919-072250-osoz48qo/5001/document"
     
     # The headers for authentication
     headers = {
