@@ -1,4 +1,10 @@
 # Databricks notebook source
+!pip install openai PyPDF2 python-docx
+!pip install -qU openai
+dbutils.library.restartPython()
+
+# COMMAND ----------
+
 from flask import Flask, request
 #from flask_cors import CORS
 import requests
@@ -7,6 +13,7 @@ import os
 import openai
 from openai import OpenAI
 from openai import AzureOpenAI
+import PyPDF2
 
 #os.environ["OPENAI_API_KEY"] = ""
 openai.api_type = "azure"
@@ -22,17 +29,28 @@ client = AzureOpenAI(api_key=openai.api_key,
                      azure_endpoint=openai.api_base,
                      )
 
-def chat_with_openai(question):
-    chat_completion = client.chat.completions.create(
+uploaded_file_path = "/Workspace/Users/vendel.mellau@raiffeisen.hu/rafi-bpc-hackathon-2024/example-pdf.pdf"
+
+# Function to extract text from a PDF file
+def extract_text_from_pdf(file_path):
+    with open(file_path, "rb") as file:
+        reader = PyPDF2.PdfReader(file)
+        text = ""
+        for page in range(len(reader.pages)):
+            text += reader.pages[page].extract_text()
+    return text
+
+def chat_with_openai(document_content, question):
+    prompt=f"The following is content from a document:\n{document_content}\n\nAnswer the following question based on this document:\n{question}"
+
+    response = client.chat.completions.create(
         model=llm_deploy_name,
         messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": f"{question}"},
-        ],
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": f"{prompt}"},
+    ],
     )
-    answer = chat_completion.choices[0].message.content
-    print(answer)
-    return answer
+    return response.choices[0].message.content
 
 app = Flask('rambo_zero_shot')
 
@@ -40,7 +58,10 @@ app = Flask('rambo_zero_shot')
 def question():
     #ide jön a app
      body = request.json
-     answer = chat_with_openai(body["question"])
+     # Extract text from the uploaded PDF
+     document_text = extract_text_from_pdf(uploaded_file_path)
+     #print(document_text[:500])  # Preview first 500 characters
+     answer = chat_with_openai(document_text, question)
      return answer
 
 app.run(host="0.0.0.0", port=5001, debug=True, use_reloader=False)
