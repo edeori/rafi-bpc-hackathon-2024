@@ -17,19 +17,18 @@ import PyPDF2
 
 #os.environ["OPENAI_API_KEY"] = ""
 openai.api_type = "azure"
-openai.api_key = os.environ["OPENAI_API_KEY"]
 openai.api_version = "2023-07-01-preview"
 openai.api_base = "https://chatgpt-summarization.openai.azure.com/"
 
 llm_model_name = "gpt-4o"
 llm_deploy_name = "model-gpt4o"
 
-client = AzureOpenAI(api_key=openai.api_key,
+client = AzureOpenAI(api_key="a6c57e86dd424bb3aad0aeec06ef4777",
                      api_version=openai.api_version,
                      azure_endpoint=openai.api_base,
                      )
 
-uploaded_file_path = "/Workspace/Users/vendel.mellau@raiffeisen.hu/rafi-bpc-hackathon-2024/example-pdf.pdf"
+uploaded_file_path = "/Workspace/Users/peter.zilahi@raiffeisen.hu/rafi-bpc-hackathon-2024/example-pdf.pdf"
 
 # Function to extract text from a PDF file
 def extract_text_from_pdf(file_path):
@@ -58,10 +57,11 @@ app = Flask('rambo_zero_shot')
 def question():
     #ide jön a app
      body = request.json
+     print(body)
      # Extract text from the uploaded PDF
      document_text = extract_text_from_pdf(uploaded_file_path)
      #print(document_text[:500])  # Preview first 500 characters
-     answer = chat_with_openai(document_text, question)
+     answer = chat_with_openai(document_text, body.get('question'))
      return answer
 
 app.run(host="0.0.0.0", port=5001, debug=True, use_reloader=False)
