@@ -1,5 +1,5 @@
 # Databricks notebook source
-print ("python2")
+print ("A ket egyetemista fog nyerni :(")
 
 # COMMAND ----------
 
