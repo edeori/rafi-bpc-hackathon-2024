@@ -23,7 +23,7 @@ openai.api_base = "https://chatgpt-summarization.openai.azure.com/"
 llm_model_name = "gpt-4o"
 llm_deploy_name = "model-gpt4o"
 
-client = AzureOpenAI(api_key="a6c57e86dd424bb3aad0aeec06ef4777",
+client = AzureOpenAI(api_key="OPENAPI_KEY",
                      api_version=openai.api_version,
                      azure_endpoint=openai.api_base,
                      )
