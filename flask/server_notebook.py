@@ -1,5 +1,4 @@
 # Databricks notebook source
-# Databricks notebook source
 !pip install openai PyPDF2 python-docx
 !pip install -qU openai
 dbutils.library.restartPython()
@@ -27,12 +26,13 @@ openai.api_base = "https://chatgpt-summarization.openai.azure.com/"
 
 llm_model_name = "gpt-4o"
 llm_deploy_name = "model-gpt4o"
-
+document_upload = True
+chat_history = []
 app_data = {
     'file_text': ""
 }
 
-client = AzureOpenAI(api_key=os.environ["OPENAI_API_KEY"],
+client = AzureOpenAI(api_key=["OPENAI_API_KEY"],
                      api_version=openai.api_version,
                      azure_endpoint=openai.api_base,
                      )
@@ -71,21 +71,31 @@ def extract_text_from_file(file, file_extension):
         doc = Document(file)
         for para in doc.paragraphs:
             text += para.text + '\n'
-    print("EXTRACT EREDMENY")
-    print(text)
     return text
 
 def chat_with_openai(document_content, question):
-    prompt=f"The following is content from a document:\n{document_content}\n\nAnswer the following question based on this document:\n{question}"
+    global document_upload
+    # Ha épp feltöltés van, akkor a dokumentum tartalmát is beillesztjük a promptba.
+    if document_upload:
+        chat_history.append(
+            {"role": "system", "content": f"The following is content from a document:\n{document_content}"}
+        )
+        document_upload = False
 
+    # Hozzáadjuk az új kérdést a felhasználótól a chat történethez.
+    chat_history.append({"role": "user", "content": question})
+
+    # OpenAI API hívás a teljes történettel.
     response = client.chat.completions.create(
         model=llm_deploy_name,
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": f"{prompt}"},
-        ],
+        messages=chat_history,
     )
-    return response.choices[0].message.content
+    print(response)
+    # Választ hozzáadjuk a chat történethez, így legközelebb is elérhető lesz.
+    assistant_reply = response.choices[0].message.content
+    chat_history.append({"role": "assistant", "content": assistant_reply})
+
+    return assistant_reply
 
 app = Flask('rambo_zero_shot')
 
@@ -95,6 +105,8 @@ def document_upload():
     uploaded_file = request.files.get('file')
 
     if uploaded_file:
+        global document_upload
+        document_upload = True
         # Get the file extension
         file_extension = uploaded_file.filename.split('.')[-1].lower()
         print("file_extension: " + file_extension)
@@ -107,7 +119,7 @@ def document_upload():
         try:
             print("The file is: " + uploaded_file.filename)
             app_data['file_text'] = extract_text_from_file(uploaded_file, file_extension)
-            return {"message": "File processed successfully!", "extracted_text": app_data['file_text']}, 200
+            return {"message": "File processed successfully!"}, 200
         except Exception as e:
             return {"error": f"Failed to process file: {str(e)}"}, 500
     else:
