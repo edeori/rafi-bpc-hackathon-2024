@@ -8,13 +8,6 @@ import openai
 from openai import OpenAI
 from openai import AzureOpenAI
 
-# COMMAND ----------
-
-os.environ["OPENAI_API_KEY"] = "a6c57e86dd424bb3aad0aeec06ef4777"
-#openai.api_key = os.environ["OPENAI_API_KEY"]
-
-# COMMAND ----------
-
 openai.api_type = "azure"
 openai.api_key = os.environ["OPENAI_API_KEY"]
 openai.api_version = "2023-07-01-preview"

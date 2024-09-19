@@ -8,6 +8,7 @@ import openai
 from openai import OpenAI
 from openai import AzureOpenAI
 
+#os.environ["OPENAI_API_KEY"] = "apikey"
 openai.api_type = "azure"
 openai.api_key = os.environ["OPENAI_API_KEY"]
 openai.api_version = "2023-07-01-preview"
@@ -25,7 +26,7 @@ client = AzureOpenAI(api_key=openai.api_key,
 
 import PyPDF2
 
-uploaded_file_path = "/Workspace/Users/peter.zilahi@raiffeisen.hu/rafi-bpc-hackathon-2024/example-pdf.pdf"
+uploaded_file_path = "/Workspace/Users/vendel.mellau@raiffeisen.hu/rafi-bpc-hackathon-2024/example-pdf.pdf"
 
 # Function to extract text from a PDF file
 def extract_text_from_pdf(file_path):
@@ -49,25 +50,14 @@ def chat_with_openai(document_content, question):
     response = client.chat.completions.create(
         model=llm_deploy_name,
         messages=[
-        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "system", "content": "You are a helpful assistant, who reads and summirezes doucments, and answers questions about the processed documents."},
         {"role": "user", "content": f"{prompt}"},
     ],
     )
     return response.choices[0].message.content
 
-print("Welcome! You can ask questions about the document. Type 'exit' to end the conversation.")
 # Example of querying the document content
-while True:
-    question = input("\nYour question: ")
-
-    # Break the loop if the user types 'exit'
-    if question.lower() == 'exit':
-        print("Exiting chat. Goodbye!")
-        break
-
-    # Get the answer from the document content
-    answer = chat_with_openai(document_text, question)
-
-    # Print the answer
-    print(f"Answer: {answer}")
+question = "What is the main topic of the document?"
+answer = chat_with_openai(document_text, question)
+print(f"Answer: {answer}")
 
