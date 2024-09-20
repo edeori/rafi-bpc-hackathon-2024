@@ -14,7 +14,7 @@ with cols[0]:
     # Input field for the user's Bearer token
     token = st.text_input("Bearer Token:", type="password")
 with cols[1]:
-    url = st.text_input("Databricks Url:")
+    url = st.text_input("Databricks Url:", placeholder="https://your-databricks-url.com")
 
 # Function to call the REST API (with SSL verification disabled)
 def call_databricks_rest_api(question):
