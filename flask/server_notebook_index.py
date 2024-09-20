@@ -1,14 +1,9 @@
 # Databricks notebook source
-!pip install openai PyPDF2 python-docx
-!pip install -qU openai
-dbutils.library.restartPython()
-
-# COMMAND ----------
-
 !pip install llama-index-embeddings-azure-openai
 !pip install llama-index-llms-azure-openai
 !pip install llama-index
 !pip install openai PyPDF2 python-docx
+!pip install docx2txt
 !pip install -qU openai
 
 dbutils.library.restartPython()
@@ -33,8 +28,13 @@ from llama_index.core import VectorStoreIndex
 from llama_index.core import StorageContext
 from llama_index.core import load_index_from_storage
 from llama_index.core import Settings
+from llama_index.core.llms import ChatMessage, MessageRole
+from llama_index.core.chat_engine import CondenseQuestionChatEngine, ContextChatEngine
+from llama_index.core import PromptTemplate
 
-api_key = ""
+
+#os.environ["OPEN_API_KEY"] = ""
+api_key = os.environ["OPEN_API_KEY"]
 azure_endpoint = "https://chatgpt-summarization.openai.azure.com/"
 api_version = "2024-02-15-preview"
 
@@ -54,6 +54,8 @@ embed_model = AzureOpenAIEmbedding(
     api_version=api_version,
 )
 
+custom_chat_history = []
+
 from llama_index.core import Settings
 Settings.llm = llm
 Settings.embed_model = embed_model
@@ -65,7 +67,10 @@ def save_file_to_dbfs(filename, file_content):
     print("save file to dbfs")
     
     # Define the path in DBFS
-    file_path = f"/dbfs/FileStore/{filename}"
+    file_path = f"/dbfs/FileStore/bpc/{filename}"
+    if not os.path.exists("/dbfs/FileStore/bpc"):
+        print(f"Creating Directory /dbfs/FileStore/bpc")
+        os.mkdir("/dbfs/FileStore/bpc")
     print(f"File path: {file_path}")
     
     # Ensure content is not None
@@ -92,18 +97,16 @@ from os import listdir
 def index_files_in_llama(file_paths):
     print("index_files_in_llama")
 
-    print(listdir("/dbfs/FileStore"))
+    print(listdir("/dbfs/FileStore/bpc"))
     
     # Ensure the directory exists and is accessible
-    input_dir = "/dbfs/FileStore"  # Correct path for accessing files in DBFS via Python
-    #input_dir_files = listdir("/dbfs/FileStore")
+    input_dir = "/dbfs/FileStore/bpc"  # Correct path for accessing files in DBFS via Python
     #print(f"Loading documents {input_dir_files} from directory: /dbfs/FileStore")
     print(f"Loading documents from directory: {input_dir}")
 
     try:
         # Load files from DBFS using SimpleDirectoryReader
         documents = SimpleDirectoryReader(input_dir=input_dir).load_data()
-        #documents = SimpleDirectoryReader(input_files=["/dbfs/FileStore/example-pdf.pdf"]).load_data()
         print(f"Loaded {len(documents)} documents")
     except Exception as e:
         #print(f"Error loading documents {input_dir_files} from /dbfs/FileStore: {str(e)}")
@@ -118,7 +121,7 @@ def index_files_in_llama(file_paths):
                                           )
         print("Index created successfully")
         print("Persisting Index...")
-        index.storage_context.persist(persist_dir="/dbfs/FileStore/docstore.json")
+        index.storage_context.persist(persist_dir="/dbfs/FileStore/bpc/docstore.json")
         print("Index saved to disk")
     except Exception as e:
         print(f"Error creating or saving index: {str(e)}")
@@ -130,17 +133,37 @@ def handle_request(question):
     print("Handling request:", question)
     
     # Set up the storage context for loading the index
-    #storage_context = StorageContext.from_defaults(persist_dir="/dbfs/FileStore")
-    vectorstoreindex = load_index_from_storage(storage_context=StorageContext.from_defaults(persist_dir="/dbfs/FileStore/docstore.json"))
+    vectorstoreindex = load_index_from_storage(storage_context=StorageContext.from_defaults(persist_dir="/dbfs/FileStore/bpc/docstore.json"))
     query_engine = vectorstoreindex.as_query_engine(retriever_mode="embedding",
                                                 response_mode="compact",
                                                 verbose=True)
 
-    # OpenAI API hívás a teljes történettel.
+    # OpenAI API hívás a teljes történettel
     
-    response = query_engine.query(question)
+    chat_engine = CondenseQuestionChatEngine.from_defaults(
+        query_engine=query_engine,
+        condense_question_prompt=PromptTemplate(question),
+        chat_history=custom_chat_history,
+        verbose=True,
+    )
+
+    response = chat_engine.chat(question)
+    #response = query_engine.query(question)
     print(response)
-    
+
+    custom_chat_history.append(
+        ChatMessage(
+            role=MessageRole.USER,
+            content=question,
+        ),
+    )
+
+    custom_chat_history.append(
+        ChatMessage(role=MessageRole.ASSISTANT, content=str(response).encode('utf-8')),
+
+    )
+
+    print(custom_chat_history)
     return str(response).encode('utf-8')
 
 
@@ -153,7 +176,7 @@ def document_upload():
     uploaded_file = request.files.get('file')  # This is a FileStorage object
     if uploaded_file:
         file_extension = uploaded_file.filename.split('.')[-1].lower()
-        allowed_file_types = ["pdf", "txt", "docx"]
+        allowed_file_types = ["txt", "md", "json", "xml", "csv", "pdf", "docx", "html"]
         
         if file_extension not in allowed_file_types:
             return {"error": f"Unsupported file type: {file_extension}"}, 400
@@ -165,10 +188,9 @@ def document_upload():
             # Now pass the binary content to save_file_to_dbfs
             file_path = save_file_to_dbfs(uploaded_file.filename, file_content)
             print(f"File saved at: {file_path}")
-            
             # Further processing (e.g., indexing the file) can go here
             index_files_in_llama(file_path)
-            
+            #handle_request(f'NEW FILE, FILENAME/DOCUMENT NAME:{uploaded_file.filename}')
             return {"message": "File processed successfully!"}, 200
         except Exception as e:
             return {"error": f"Failed to process file: {str(e)}"}, 500
